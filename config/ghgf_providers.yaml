@@ -28,3 +28,113 @@ ai_providers:
 
   # Priority 3: Gemini Free (10,000/day)
   gemini_free:
+    type: "api"
+    name: "Google Gemini Free API"
+    api_key: "${SECRETS.GOOGLE_API_KEY}"
+    endpoint: "https://generativelanguage.googleapis.com/v1beta/models"
+    models: ["gemini-pro", "gemini-pro-vision"]
+    priority: 3
+    cost_per_request: 0
+    free_tier: true
+    request_limit: "10000/day"
+    status: "recommended"
+    description: "Google Gemini API - free tier with generous limits"
+
+  # Priority 4: ChatGPT Free (40/hour)
+  chatgpt_free:
+    type: "web"
+    name: "ChatGPT Free Web"
+    login_required: true
+    priority: 4
+    cost_per_request: 0
+    free_tier: true
+    request_limit: "40/hour"
+    status: "recommended"
+    description: "OpenAI ChatGPT free account"
+
+  # Priority 5: Grok Free
+  grok_free:
+    type: "web"
+    name: "Grok Free"
+    login_required: true
+    priority: 5
+    cost_per_request: 0
+    free_tier: true
+    request_limit: "generous"
+    status: "optional"
+    description: "X (Twitter) Grok - free tier available"
+
+  # Priority 6: Perplexity Free
+  perplexity_free:
+    type: "web"
+    name: "Perplexity Free"
+    login_required: true
+    priority: 6
+    cost_per_request: 0
+    free_tier: true
+    request_limit: "unlimited"
+    status: "optional"
+    description: "Perplexity AI - free web access"
+
+  # Fallback: Claude Paid (Only if all free tiers exhausted)
+  claude_paid:
+    type: "api"
+    name: "Claude Paid API"
+    api_key: "${SECRETS.CLAUDE_API_KEY}"
+    endpoint: "https://api.anthropic.com/v1"
+    priority: 20
+    cost_per_request: 0.003
+    free_tier: false
+    status: "fallback_only"
+    description: "Anthropic Claude API - paid, use as last resort"
+
+  # Fallback: Gemini Paid (Only if all free tiers exhausted)
+  gemini_paid:
+    type: "api"
+    name: "Google Gemini Paid API"
+    api_key: "${SECRETS.GOOGLE_API_KEY_PAID}"
+    endpoint: "https://generativelanguage.googleapis.com/v1"
+    priority: 21
+    cost_per_request: 0.0005
+    free_tier: false
+    status: "fallback_only"
+    description: "Google Gemini Paid API - use as backup"
+
+  # Fallback: OpenAI Paid (Only if all free tiers exhausted)
+  openai_paid:
+    type: "api"
+    api_key: "${SECRETS.OPENAI_API_KEY}"
+    endpoint: "https://api.openai.com/v1"
+    priority: 22
+    cost_per_request: 0.002
+    free_tier: false
+    status: "fallback_only"
+    description: "OpenAI API - paid, use as last resort"
+
+# Fallback Chain (Order matters - tries each in sequence)
+fallback_chain:
+  - "ollama_local"      # Try local first (if installed)
+  - "claude_free"       # Try Claude free (50/hour)
+  - "gemini_free"       # Try Gemini free (10K/day)
+  - "chatgpt_free"      # Try ChatGPT free (40/hour)
+  - "grok_free"         # Try Grok free
+  - "perplexity_free"   # Try Perplexity free
+  - "claude_paid"       # Fall back to paid Claude
+  - "gemini_paid"       # Fall back to paid Gemini
+  - "openai_paid"       # Last resort: OpenAI paid
+
+# Health Check Settings
+health_check:
+  interval_minutes: 60
+  timeout_seconds: 10
+  auto_disable_on_failure: true
+  retry_after_minutes: 30
+
+# Quota Management
+quota_management:
+  track_daily: true
+  track_monthly: true
+  reset_daily_at: "00:00 UTC"
+  reset_monthly_at: "01:00 UTC on first day"
+  alert_at_percent: 80
+  block_at_percent: 100
