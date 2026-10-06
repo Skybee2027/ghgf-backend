@@ -1,32 +1,40 @@
-robots:
-  robo_1_trends:
-    name: "Trend Discovery Robot"
+# GHGF Agent Configuration
+# 10-robot autonomous blog system
+
+agents:
+  GHGF_1:
+    name: "Trend Discovery Agent"
     enabled: true
     schedule: "0 8 * * *"
+    type: "trend_discovery"
     tasks:
       - task_id: "1.1"
         name: "Discover Trending Health Topics"
         ai_provider: "gemini_free"
         parameters:
-          trend_sources: ["google_trends", "reddit", "twitter"]
+          trend_sources: ["google_trends", "reddit"]
           category: "health"
           min_relevance: 5
 
-  robo_2_outline:
-    name: "Outline Generator Robot"
+  GHGF_2:
+    name: "Outline Generator Agent"
     enabled: true
     schedule: "0 8 15 * * *"
-    dependencies: ["robo_1_trends"]
+    type: "outline_generation"
+    dependencies: ["GHGF_1"]
     tasks:
       - task_id: "2.1"
         name: "Generate Blog Outlines"
         ai_provider: "claude_free"
+        parameters:
+          sections: 5
 
-  robo_3_writer:
-    name: "Content Writer Robot"
+  GHGF_3:
+    name: "Content Writer Agent"
     enabled: true
     schedule: "0 8 30 * * *"
-    dependencies: ["robo_2_outline"]
+    type: "content_writing"
+    dependencies: ["GHGF_2"]
     tasks:
       - task_id: "3.1"
         name: "Write Blog Posts"
@@ -35,69 +43,77 @@ robots:
           post_length: 1500
           tone: "informative"
 
-  robo_3_5_images:
-    name: "Image Generator Robot"
+  GHGF_3_5:
+    name: "Image Generator Agent"
     enabled: true
     schedule: "0 9 * * *"
+    type: "image_generation"
+    dependencies: ["GHGF_3"]
     tasks:
       - task_id: "3.5.1"
         name: "Generate Featured Images"
         ai_provider: "gemini_free"
 
-  robo_4_affiliate:
-    name: "Affiliate Research Robot"
+  GHGF_4:
+    name: "Affiliate Research Agent"
     enabled: true
     schedule: "0 10 * * *"
-    dependencies: ["robo_3_writer"]
+    type: "affiliate_research"
+    dependencies: ["GHGF_3"]
     tasks:
       - task_id: "4.1"
         name: "Research Affiliate Products"
         ai_provider: "gemini_free"
 
-  robo_5_reviewer:
-    name: "Content Reviewer Robot"
+  GHGF_5:
+    name: "Content Reviewer Agent"
     enabled: true
     schedule: "0 11 * * *"
-    dependencies: ["robo_3_writer"]
+    type: "content_review"
+    dependencies: ["GHGF_3"]
     tasks:
       - task_id: "5.1"
         name: "Review Content Quality"
         ai_provider: "claude_free"
+        parameters:
+          quality_threshold: 7.5
 
-  robo_6_compliance:
-    name: "Compliance Checker Robot"
+  GHGF_6:
+    name: "Compliance Checker Agent"
     enabled: true
     schedule: "0 11 30 * * *"
-    dependencies: ["robo_5_reviewer"]
+    type: "compliance_check"
+    dependencies: ["GHGF_5"]
     tasks:
       - task_id: "6.1"
         name: "Check FTC Compliance"
         ai_provider: "gemini_free"
 
-  robo_7_publisher:
-    name: "WordPress Publisher Robot"
+  GHGF_7:
+    name: "WordPress Publisher Agent"
     enabled: true
     schedule: "0 12 * * *"
-    dependencies: ["robo_6_compliance"]
+    type: "wordpress_publishing"
+    dependencies: ["GHGF_6", "GHGF_3_5", "GHGF_4"]
     tasks:
       - task_id: "7.1"
         name: "Publish to WordPress"
-        ai_provider: "none"
 
-  robo_8_monitor:
-    name: "Performance Monitor Robot"
+  GHGF_8:
+    name: "Performance Monitor Agent"
     enabled: true
     schedule: "0 17 * * *"
+    type: "performance_monitoring"
     tasks:
       - task_id: "8.1"
         name: "Monitor Website Performance"
-        ai_provider: "none"
 
-  robo_9_optimizer:
-    name: "SEO Optimizer Robot"
+  GHGF_9:
+    name: "SEO Optimizer Agent"
     enabled: true
     schedule: "0 17 30 * * *"
-    dependencies: ["robo_7_publisher"]
+    type: "seo_optimization"
+    dependencies: ["GHGF_7"]
     tasks:
       - task_id: "9.1"
         name: "Optimize for SEO"
