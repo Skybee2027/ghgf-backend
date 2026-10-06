@@ -1,1 +1,50 @@
+usage_strategy:
+  trend_discovery:
+    preferred_provider: "gemini_free"
+    fallback_chain: true
 
+  outline_generation:
+    preferred_provider: "claude_free"
+    fallback_chain: true
+
+  content_writing:
+    preferred_provider: "gemini_free"
+    fallback_chain: true
+
+  image_generation:
+    preferred_provider: "gemini_free"
+    fallback_chain: true
+
+  affiliate_research:
+    preferred_provider: "gemini_free"
+    fallback_chain: true
+
+  content_review:
+    preferred_provider: "claude_free"
+    fallback_chain: true
+
+  compliance_check:
+    preferred_provider: "gemini_free"
+    fallback_chain: true
+
+  seo_optimization:
+    preferred_provider: "gemini_free"
+    fallback_chain: true
+
+cost_optimization:
+  daily_budget: 10
+  monthly_budget: 100
+  prioritize_free_tier: true
+  auto_switch_on_quota: true
+
+quality_gates:
+  minimum_readability: 60
+  minimum_word_count: 1400
+  minimum_engagement_score: 6.5
+  auto_regenerate_on_fail: true
+
+performance:
+  max_concurrent_agents: 3
+  timeout_seconds: 300
+  retry_attempts: 3
+  retry_delay_seconds: 5
