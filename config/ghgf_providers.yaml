@@ -1,1 +1,30 @@
+# AI Provider Configuration - Free-First Strategy
 
+ai_providers:
+  # Priority 1: Local (Completely Free, Unlimited)
+  ollama_local:
+    type: "local"
+    name: "Ollama Local"
+    endpoint: "http://localhost:11434"
+    models: ["mistral", "llama2", "neural-chat"]
+    priority: 1
+    cost_per_request: 0
+    free_tier: true
+    request_limit: "unlimited"
+    status: "optional"
+    description: "Local LLM - completely free if Ollama installed"
+
+  # Priority 2: Claude Free (50/hour)
+  claude_free:
+    type: "web"
+    name: "Claude Free Web"
+    login_required: true
+    priority: 2
+    cost_per_request: 0
+    free_tier: true
+    request_limit: "50/hour"
+    status: "recommended"
+    description: "Claude.ai free account - 50 requests/hour"
+
+  # Priority 3: Gemini Free (10,000/day)
+  gemini_free:
