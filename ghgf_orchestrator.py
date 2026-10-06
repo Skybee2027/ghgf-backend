@@ -20,7 +20,7 @@ class GHGFOrchestrator:
     """Main orchestrator managing all GHGF agents"""
 
     def __init__(self, config_dir: str = "config"):
-        self.config_dir = Path(config_dir)
+        self.config_dir = Path(__file__).parent / config_dir
         self.data_dir = Path("data")
         self.logs_dir = self.data_dir / "logs"
         self.logs_dir.mkdir(parents=True, exist_ok=True)
