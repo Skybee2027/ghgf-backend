@@ -1,0 +1,96 @@
+agents:
+  GHGF_1:
+    id: "GHGF_1"
+    name: "Trend Discovery"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: []
+    config:
+      search_queries: 3
+      quality_threshold: 0.7
+
+  GHGF_2:
+    id: "GHGF_2"
+    name: "Outline Generator"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_1"]
+    config:
+      sections: 5
+      depth: "medium"
+
+  GHGF_3:
+    id: "GHGF_3"
+    name: "Content Writer"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_2"]
+    config:
+      word_count: 1500
+      readability_score: 60
+
+  GHGF_3_5:
+    id: "GHGF_3_5"
+    name: "Image Generator"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_3"]
+    config:
+      images_per_post: 3
+      style: "professional"
+
+  GHGF_4:
+    id: "GHGF_4"
+    name: "Affiliate Research"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_3"]
+    config:
+      product_limit: 5
+      commission_threshold: 0.05
+
+  GHGF_5:
+    id: "GHGF_5"
+    name: "Content Reviewer"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_3", "GHGF_4"]
+    config:
+      quality_checks: ["grammar", "readability", "seo"]
+
+  GHGF_6:
+    id: "GHGF_6"
+    name: "Compliance Checker"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_5"]
+    config:
+      checks: ["ftc_disclosure", "honesty", "false_claims"]
+
+  GHGF_7:
+    id: "GHGF_7"
+    name: "Publisher"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_6", "GHGF_3_5", "GHGF_4"]
+    config:
+      platform: "wordpress"
+      publish_status: "publish"
+
+  GHGF_8:
+    id: "GHGF_8"
+    name: "Performance Monitor"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_7"]
+    config:
+      metrics: ["uptime", "page_speed", "traffic"]
+
+  GHGF_9:
+    id: "GHGF_9"
+    name: "SEO Optimizer"
+    enabled: true
+    schedule: "0 8 * * *"
+    dependencies: ["GHGF_7"]
+    config:
+      optimize_for: ["keywords", "meta", "links"]
