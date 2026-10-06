@@ -1,0 +1,104 @@
+robots:
+  robo_1_trends:
+    name: "Trend Discovery Robot"
+    enabled: true
+    schedule: "0 8 * * *"
+    tasks:
+      - task_id: "1.1"
+        name: "Discover Trending Health Topics"
+        ai_provider: "gemini_free"
+        parameters:
+          trend_sources: ["google_trends", "reddit", "twitter"]
+          category: "health"
+          min_relevance: 5
+
+  robo_2_outline:
+    name: "Outline Generator Robot"
+    enabled: true
+    schedule: "0 8 15 * * *"
+    dependencies: ["robo_1_trends"]
+    tasks:
+      - task_id: "2.1"
+        name: "Generate Blog Outlines"
+        ai_provider: "claude_free"
+
+  robo_3_writer:
+    name: "Content Writer Robot"
+    enabled: true
+    schedule: "0 8 30 * * *"
+    dependencies: ["robo_2_outline"]
+    tasks:
+      - task_id: "3.1"
+        name: "Write Blog Posts"
+        ai_provider: "gemini_free"
+        parameters:
+          post_length: 1500
+          tone: "informative"
+
+  robo_3_5_images:
+    name: "Image Generator Robot"
+    enabled: true
+    schedule: "0 9 * * *"
+    tasks:
+      - task_id: "3.5.1"
+        name: "Generate Featured Images"
+        ai_provider: "gemini_free"
+
+  robo_4_affiliate:
+    name: "Affiliate Research Robot"
+    enabled: true
+    schedule: "0 10 * * *"
+    dependencies: ["robo_3_writer"]
+    tasks:
+      - task_id: "4.1"
+        name: "Research Affiliate Products"
+        ai_provider: "gemini_free"
+
+  robo_5_reviewer:
+    name: "Content Reviewer Robot"
+    enabled: true
+    schedule: "0 11 * * *"
+    dependencies: ["robo_3_writer"]
+    tasks:
+      - task_id: "5.1"
+        name: "Review Content Quality"
+        ai_provider: "claude_free"
+
+  robo_6_compliance:
+    name: "Compliance Checker Robot"
+    enabled: true
+    schedule: "0 11 30 * * *"
+    dependencies: ["robo_5_reviewer"]
+    tasks:
+      - task_id: "6.1"
+        name: "Check FTC Compliance"
+        ai_provider: "gemini_free"
+
+  robo_7_publisher:
+    name: "WordPress Publisher Robot"
+    enabled: true
+    schedule: "0 12 * * *"
+    dependencies: ["robo_6_compliance"]
+    tasks:
+      - task_id: "7.1"
+        name: "Publish to WordPress"
+        ai_provider: "none"
+
+  robo_8_monitor:
+    name: "Performance Monitor Robot"
+    enabled: true
+    schedule: "0 17 * * *"
+    tasks:
+      - task_id: "8.1"
+        name: "Monitor Website Performance"
+        ai_provider: "none"
+
+  robo_9_optimizer:
+    name: "SEO Optimizer Robot"
+    enabled: true
+    schedule: "0 17 30 * * *"
+    dependencies: ["robo_7_publisher"]
+    tasks:
+      - task_id: "9.1"
+        name: "Optimize for SEO"
+        ai_provider: "gemini_free"
