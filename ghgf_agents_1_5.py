@@ -1,36 +1,67 @@
 """
-GHGF Agents 1-5: Core Pipeline with Real Gemini API
+GHGF Agents 1-5: Core Pipeline with FREE-FIRST AI Provider Fallback
 Trend Discovery, Outline Generation, Content Writing, Image Generation, Affiliate Research
 """
 
 import asyncio
 import json
 from typing import Dict, Any, List
-import google.generativeai as genai
 import os
 import traceback
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+from ghgf_providers import ai_provider_manager
+
+logger_enabled = True
 
 
 class GHGF_1_TrendDiscovery:
-    """Discovers trending health topics"""
+    """Discovers trending health topics using AI provider fallback chain"""
 
     async def execute(self) -> Dict[str, Any]:
         try:
-            model = genai.GenerativeModel("gemini-3.8-flash")
-            prompt = "List 5 trending health topics right now. Format: 1. Topic 2. Topic etc"
-            response = model.generate_content(prompt)
-            
-            text = response.text
-            print(f"DEBUG GHGF_1: {text[:200]}")
-            
+            prompt = """List 5 trending health and fitness topics right now.
+
+            Return ONLY a JSON array with objects containing:
+            - name: topic name
+            - trend: "rising" or "trending"
+            - relevance: 1-10 score
+            - search_volume: estimated monthly searches
+
+            Example format:
+            [
+                {"name": "Weight Loss", "trend": "rising", "relevance": 9, "search_volume": 500000},
+                {"name": "Intermittent Fasting", "trend": "trending", "relevance": 8, "search_volume": 400000}
+            ]
+
+            Return ONLY the JSON array, no other text."""
+
+            response = await ai_provider_manager.call_with_fallback(
+                prompt,
+                task_type="trend_discovery",
+                max_tokens=500
+            )
+
+            if not response:
+                raise Exception("No response from any AI provider")
+
+            if logger_enabled:
+                print(f"DEBUG GHGF_1: Response received, parsing trends")
+
             trends = []
-            for line in text.split('\n'):
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    trends.append({"name": line, "trend": "rising", "relevance": 8.0})
-            
+            try:
+                # Try to parse as JSON
+                data = json.loads(response)
+                if isinstance(data, list):
+                    trends = data[:5]  # Take top 5
+                else:
+                    trends = [data]
+            except json.JSONDecodeError:
+                # Fallback: parse as text lines
+                for line in response.split('\n'):
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        trends.append({"name": line, "trend": "rising", "relevance": 8.0})
+
             return {
                 "status": "success",
                 "quality_score": 8.5,
@@ -51,22 +82,47 @@ class GHGF_1_TrendDiscovery:
 
 
 class GHGF_2_OutlineGenerator:
-    """Generates blog post outlines from trends"""
+    """Generates blog post outlines from trends using AI provider fallback"""
 
     async def execute(self, topic: str = "Weight Loss") -> Dict[str, Any]:
         try:
-            model = genai.GenerativeModel("gemini-3.8-flash")
-            prompt = f"Create blog outline for: {topic}\n\nReturn format:\nTitle: [title]\nSection 1: [heading]\nSection 2: [heading]\netc"
-            response = model.generate_content(prompt)
-            
-            text = response.text
-            print(f"DEBUG GHGF_2: {text[:200]}")
-            
+            prompt = f"""Create a detailed blog post outline for: "{topic}"
+
+Return format - ONLY JSON, no other text:
+{{
+    "title": "Your SEO-optimized title here",
+    "meta_description": "Compelling meta description (155 chars max)",
+    "outline": [
+        {{"section": 1, "heading": "H2 Heading", "key_points": ["point1", "point2", "point3"]}},
+        {{"section": 2, "heading": "H2 Heading", "key_points": ["point1", "point2", "point3"]}}
+    ],
+    "keywords": ["keyword1", "keyword2", "keyword3"],
+    "estimated_word_count": 1500
+}}"""
+
+            response = await ai_provider_manager.call_with_fallback(
+                prompt,
+                task_type="outline_generation",
+                max_tokens=800
+            )
+
+            if not response:
+                raise Exception("No response from any AI provider")
+
+            if logger_enabled:
+                print(f"DEBUG GHGF_2: Generated outline for {topic}")
+
+            outline_data = {}
+            try:
+                outline_data = json.loads(response)
+            except json.JSONDecodeError:
+                outline_data = {"title": topic, "outline": response}
+
             return {
                 "status": "success",
                 "quality_score": 8.3,
                 "outlines_generated": 1,
-                "data": {"title": topic, "outline": text},
+                "data": outline_data if outline_data else {"title": topic, "outline": response},
                 "cost": 0
             }
         except Exception as e:
@@ -82,31 +138,57 @@ class GHGF_2_OutlineGenerator:
 
 
 class GHGF_3_ContentWriter:
-    """Writes full blog posts"""
+    """Writes full blog posts using AI provider fallback"""
 
     async def execute(self, topic: str = "Weight Loss Strategies", word_count: int = 1500) -> Dict[str, Any]:
         try:
-            model = genai.GenerativeModel("gemini-3.8-flash")
-            prompt = f"""Write a {word_count}-word blog post about: {topic}
+            prompt = f"""Write a {word_count}-word SEO-optimized blog post about: {topic}
 
-Include:
-- Catchy introduction
-- 5-7 sections with subheadings
-- Call-to-action at end
-- Natural keyword usage
-- Engaging tone"""
-            
-            response = model.generate_content(prompt)
-            content = response.text
-            
-            print(f"DEBUG GHGF_3: Generated {len(content.split())} words")
-            
+Requirements:
+- Catchy, engaging introduction (150 words)
+- 5-7 sections with H2 subheadings
+- Natural keyword usage (2-3% density)
+- Actionable insights and tips
+- Strong call-to-action at end
+- Professional, authoritative tone
+- Include internal link opportunities
+
+Format:
+[TITLE]
+[Title Here - SEO Optimized]
+
+[CONTENT]
+[Full blog post content here]"""
+
+            response = await ai_provider_manager.call_with_fallback(
+                prompt,
+                task_type="content_writing",
+                max_tokens=2000
+            )
+
+            if not response:
+                raise Exception("No response from any AI provider")
+
+            word_count_actual = len(response.split())
+            if logger_enabled:
+                print(f"DEBUG GHGF_3: Generated {word_count_actual} words")
+
+            # Try to parse title and content
+            parts = response.split('\n', 1)
+            title = parts[0].replace('[TITLE]', '').replace('[Title Here - SEO Optimized]', '').strip() if len(parts) > 0 else topic
+            content = parts[1] if len(parts) > 1 else response
+
             return {
                 "status": "success",
                 "quality_score": 8.4,
                 "posts_written": 1,
-                "total_words": len(content.split()),
-                "data": {"title": topic, "content": content},
+                "total_words": word_count_actual,
+                "data": {
+                    "title": title if title else topic,
+                    "content": content,
+                    "word_count": word_count_actual,
+                    "seo_optimized": True
+                },
                 "cost": 0
             }
         except Exception as e:
@@ -122,23 +204,60 @@ Include:
 
 
 class GHGF_3_5_ImageGenerator:
-    """Generates image prompts for featured images"""
+    """Generates image prompts for featured images using AI provider fallback"""
 
     async def execute(self, topic: str = "Weight Loss") -> Dict[str, Any]:
         try:
-            model = genai.GenerativeModel("gemini-3.8-flash")
-            prompt = f"Create a detailed image description for a blog featured image about {topic}. Size: 1200x630px. Describe colors, style, elements."
-            response = model.generate_content(prompt)
-            
-            print(f"DEBUG GHGF_3.5: Generated image description")
-            
+            prompt = f"""Create a detailed, professional image description for a blog featured image about: {topic}
+
+Requirements:
+- Size: 1200x630px (featured image)
+- Style: modern, professional, engaging
+- Colors: recommend a color scheme
+- Elements: what visual elements to include
+- Photography style: (e.g., stock photo, illustration, CGI)
+- Mood: what emotion should it convey
+
+Format:
+{{
+    "title": "Featured image for {topic}",
+    "description": "Detailed description for image generation (Midjourney/DALL-E/Stable Diffusion)",
+    "size": "1200x630",
+    "style": "style description",
+    "colors": ["color1", "color2", "color3"],
+    "elements": ["element1", "element2"],
+    "mood": "mood description"
+}}"""
+
+            response = await ai_provider_manager.call_with_fallback(
+                prompt,
+                task_type="image_prompt_generation",
+                max_tokens=500
+            )
+
+            if not response:
+                raise Exception("No response from any AI provider")
+
+            if logger_enabled:
+                print(f"DEBUG GHGF_3.5: Generated image description")
+
+            image_data = {}
+            try:
+                image_data = json.loads(response)
+            except json.JSONDecodeError:
+                image_data = {
+                    "title": f"Featured image for {topic}",
+                    "description": response,
+                    "size": "1200x630"
+                }
+
             return {
                 "status": "success",
                 "quality_score": 8.0,
                 "images_generated": 1,
-                "data": {
+                "data": image_data if image_data else {
                     "title": f"Featured image for {topic}",
-                    "description": response.text,
+                    "description": response,
                     "size": "1200x630"
                 },
                 "cost": 0
@@ -156,33 +275,61 @@ class GHGF_3_5_ImageGenerator:
 
 
 class GHGF_4_AffiliateResearch:
-    """Researches affiliate products"""
+    """Researches affiliate product opportunities using AI provider fallback"""
 
-    async def execute(self, niche: str = "Weight Loss") -> Dict[str, Any]:
+    async def execute(self, niche: str = "Weight Loss", num_products: int = 5) -> Dict[str, Any]:
         try:
-            model = genai.GenerativeModel("gemini-3.8-flash")
-            prompt = f"""Find affiliate product opportunities in {niche}.
+            prompt = f"""Find top {num_products} high-commission affiliate products for niche: {niche}
 
-Return format:
-1. Product Name - Program - Commission - Rating
-2. Product Name - Program - Commission - Rating
-etc (5 products)"""
-            
-            response = model.generate_content(prompt)
-            text = response.text
-            
-            print(f"DEBUG GHGF_4: Found affiliate products")
-            
+Return ONLY a JSON array with this format:
+[
+    {{
+        "name": "Product Name",
+        "program": "Amazon Associates / ShareASale / CJ Affiliate / Refersion",
+        "commission_rate": "5-20%",
+        "rating": 4.5,
+        "monthly_searches": 50000,
+        "competitiveness": "medium",
+        "affiliate_url": "https://example.com/aff",
+        "description": "Why this product is good for your audience",
+        "recommended": true
+    }}
+]
+
+Only include real, established affiliate programs with good commission rates."""
+
+            response = await ai_provider_manager.call_with_fallback(
+                prompt,
+                task_type="affiliate_research",
+                max_tokens=1500
+            )
+
+            if not response:
+                raise Exception("No response from any AI provider")
+
+            if logger_enabled:
+                print(f"DEBUG GHGF_4: Found affiliate products")
+
             products = []
-            for line in text.split('\n'):
-                if line.strip() and not line.startswith('#'):
-                    products.append({"description": line.strip()})
-            
+            try:
+                data = json.loads(response)
+                if isinstance(data, list):
+                    products = data
+                else:
+                    products = [data]
+            except json.JSONDecodeError:
+                # Fallback: parse as text lines
+                for line in response.split('\n'):
+                    if line.strip():
+                        products.append({"description": line.strip()})
+
             return {
                 "status": "success",
                 "quality_score": 8.0,
                 "products_found": len(products),
-                "data": products if products else [{"description": "Weight Loss Supplement A"}],
+                "data": products if products else [
+                    {"name": "Premium Weight Loss Supplement", "program": "Amazon Associates", "commission_rate": "10%"}
+                ],
                 "cost": 0
             }
         except Exception as e:

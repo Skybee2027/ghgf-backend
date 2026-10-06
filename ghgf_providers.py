@@ -1,7 +1,7 @@
 """
 GHGF AI Provider Management - REAL API Implementation
 Implements free-first strategy with automatic fallback to real providers:
-Groq → HuggingFace → Gemini → Claude → OpenAI
+Groq (Free) → HuggingFace (Free) → Gemini (Free) → Claude (Paid) → OpenAI (Paid)
 """
 
 import asyncio
@@ -27,7 +27,7 @@ class AIProviderManager:
     def _init_clients(self):
         """Initialize all provider clients"""
 
-        # Groq Client
+        # Groq Client (Free: 9,000 requests/min)
         try:
             from groq import Groq
             groq_key = os.getenv("GROQ_API_KEY")
@@ -41,7 +41,7 @@ class AIProviderManager:
             self.groq_client = None
             logger.warning(f"⚠️  Groq init failed: {e}")
 
-        # HuggingFace Client
+        # HuggingFace Client (Free: Limited inference)
         try:
             from huggingface_hub import InferenceClient
             hf_key = os.getenv("HUGGINGFACE_API_KEY")
@@ -55,7 +55,7 @@ class AIProviderManager:
             self.hf_client = None
             logger.warning(f"⚠️  HuggingFace init failed: {e}")
 
-        # Gemini Client
+        # Gemini Client (Free: 20 requests/day, 2 concurrent)
         try:
             import google.generativeai as genai
             gemini_key = os.getenv("GOOGLE_API_KEY")
@@ -70,7 +70,7 @@ class AIProviderManager:
             self.genai = None
             logger.warning(f"⚠️  Gemini init failed: {e}")
 
-        # Claude Client
+        # Claude Client (Paid: Requires API key)
         try:
             import anthropic
             claude_key = os.getenv("CLAUDE_API_KEY")
@@ -84,7 +84,7 @@ class AIProviderManager:
             self.claude_client = None
             logger.warning(f"⚠️  Claude init failed: {e}")
 
-        # OpenAI Client
+        # OpenAI Client (Paid: Requires API key)
         try:
             import openai
             openai_key = os.getenv("OPENAI_API_KEY")
@@ -101,7 +101,7 @@ class AIProviderManager:
     async def call_with_fallback(self, prompt: str, task_type: str = "default", max_tokens: int = 1000) -> Optional[str]:
         """Call AI with automatic fallback on failure"""
 
-        logger.info(f"🔄 Starting fallback chain for {task_type}")
+        logger.info(f"🔄 Starting fallback chain for task_type={task_type}")
         logger.info(f"📋 Fallback order: {' → '.join(self.fallback_chain)}")
 
         for provider_id in self.fallback_chain:
@@ -136,7 +136,7 @@ class AIProviderManager:
         return None
 
     async def _call_groq(self, prompt: str, max_tokens: int) -> Optional[str]:
-        """Call Groq API (Free: 9,000 req/min)"""
+        """Call Groq API (Free: 9,000 req/min, mixtral-8x7b-32768)"""
         if not self.groq_client:
             raise Exception("Groq client not initialized")
 
@@ -144,7 +144,7 @@ class AIProviderManager:
             response = self.groq_client.chat.completions.create(
                 model="mixtral-8x7b-32768",
                 messages=[
-                    {"role": "system", "content": "You are a professional blog writer. Write high-quality, engaging content."},
+                    {"role": "system", "content": "You are a professional blog writer. Write high-quality, engaging, SEO-optimized content."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=min(max_tokens, 4096),
@@ -155,7 +155,7 @@ class AIProviderManager:
             raise Exception(f"Groq API error: {str(e)}")
 
     async def _call_huggingface(self, prompt: str, max_tokens: int) -> Optional[str]:
-        """Call HuggingFace Inference API (Free: Limited)"""
+        """Call HuggingFace Inference API (Free: Limited requests)"""
         if not self.hf_client:
             raise Exception("HuggingFace client not initialized")
 
@@ -171,19 +171,19 @@ class AIProviderManager:
             raise Exception(f"HuggingFace API error: {str(e)}")
 
     async def _call_gemini(self, prompt: str, max_tokens: int) -> Optional[str]:
-        """Call Gemini API (Free: 20 req/day)"""
+        """Call Gemini API (Free: 20 req/day, 2 concurrent, gemini-1.5-flash or gemini-pro)"""
         if not self.genai:
             raise Exception("Gemini client not initialized")
 
         try:
-            model = self.genai.GenerativeModel("gemini-3.8-flash")
+            model = self.genai.GenerativeModel("gemini-1.5-flash")
             response = model.generate_content(prompt)
             return response.text
         except Exception as e:
             raise Exception(f"Gemini API error: {str(e)}")
 
     async def _call_claude(self, prompt: str, max_tokens: int) -> Optional[str]:
-        """Call Claude API (Paid: Requires API key)"""
+        """Call Claude API (Paid: Requires API key) - claude-3-5-sonnet"""
         if not self.claude_client:
             raise Exception("Claude client not initialized - set CLAUDE_API_KEY")
 
@@ -200,7 +200,7 @@ class AIProviderManager:
             raise Exception(f"Claude API error: {str(e)}")
 
     async def _call_openai(self, prompt: str, max_tokens: int) -> Optional[str]:
-        """Call OpenAI API (Paid: Requires API key)"""
+        """Call OpenAI API (Paid: Requires API key) - gpt-4o-mini"""
         if not self.openai_client:
             raise Exception("OpenAI client not initialized - set OPENAI_API_KEY")
 
@@ -208,7 +208,7 @@ class AIProviderManager:
             response = await self.openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a professional blog writer. Write high-quality, engaging content."},
+                    {"role": "system", "content": "You are a professional blog writer. Write high-quality, engaging, SEO-optimized content."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=max_tokens,
@@ -248,15 +248,6 @@ class ProviderHealthChecker:
                 logger.warning(f"❌ {provider_id.upper()}: {str(e)[:80]}")
 
         return self.health_status
-
-    async def _check_provider(self, provider_id: str, provider: Dict) -> bool:
-        """Check single provider health"""
-        try:
-            result = await self.manager._call_provider(provider_id, "Test", max_tokens=10)
-            return result is not None
-        except Exception as e:
-            logger.warning(f"Health check failed for {provider_id}: {e}")
-            return False
 
 
 # Global instance for use in agents

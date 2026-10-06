@@ -1,11 +1,31 @@
+# GHGF Autonomous Blog System Requirements
+# Production-ready with pinned versions
+
+# Async & HTTP
 aiohttp==3.9.1
 httpx==0.25.2
-pyyaml==6.0.1
-python-dotenv==1.0.0
-anthropic==0.25.0
-google-generativeai==0.3.0
 requests==2.31.0
 asyncio-contextmanager==1.0.1
-groq
-huggingface-hub
-openai
+
+# Configuration
+pyyaml==6.0.1
+python-dotenv==1.0.0
+
+# AI Providers - FREE TIER PRIMARY
+groq==0.4.2
+huggingface-hub==0.19.4
+google-generativeai==0.3.0
+
+# AI Providers - PAID BACKUP
+anthropic==0.25.0
+openai==1.3.8
+
+# WordPress Publishing
+wordpress-api==0.5.0
+
+# Database & Logging
+sqlite3  # Built-in
+
+# Optional: For extended features
+pillow==10.0.0  # Image processing
+beautifulsoup4==4.12.2  # HTML parsing
