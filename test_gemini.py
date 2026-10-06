@@ -1,23 +1,21 @@
 import os
 import google.generativeai as genai
 
-print("🔍 Testing Gemini API...")
-
 api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    print("❌ GOOGLE_API_KEY not found")
-    exit(1)
-
-print("✅ API Key found")
-
 genai.configure(api_key=api_key)
-print("✅ Gemini configured")
 
-try:
-    model = genai.GenerativeModel("gemini-pro")
-    response = model.generate_content("Say hello in one sentence.")
-    print(f"✅ Gemini API WORKING!")
-    print(f"Response: {response.text}")
-except Exception as e:
-    print(f"❌ ERROR: {e}")
-    exit(1)
+print("📋 Available Models:")
+models = genai.list_models()
+for m in models:
+    if 'generateContent' in m.supported_generation_methods:
+        print(f"✅ {m.name}")
+
+print("\n🎯 Testing first available model...")
+available = [m.name for m in models if 'generateContent' in m.supported_generation_methods]
+if available:
+    model_name = available[0].split('/')[-1]
+    model = genai.GenerativeModel(model_name)
+    response = model.generate_content("Hello")
+    print(f"✅ WORKING! Using: {model_name}")
+else:
+    print("❌ No models available")
