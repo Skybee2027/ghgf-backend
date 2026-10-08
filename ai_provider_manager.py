@@ -242,8 +242,8 @@ class AIProviderManager:
     async def _gemini_free_text(self, prompt: str) -> Dict[str, Any]:
         """Google Gemini free tier - FREE (10k requests/day)"""
         try:
-            # Use current Gemini model (gemini-pro is deprecated)
-            model = genai.GenerativeModel("gemini-2.0-flash")
+            # Use current Gemini model (gemini-2.0-flash is deprecated, use gemini-3.8-flash)
+            model = genai.GenerativeModel("gemini-3.8-flash")
             response = model.generate_content(prompt)
 
             return {
@@ -509,7 +509,7 @@ class AIProviderManager:
                 prompt=prompt,
                 n=1,
                 size=size,
-                model="dall-e-3"
+                model="dall-e-2"
             )
 
             logger.warning(f"⚠️ OpenAI DALL-E cost for this image: $0.08")
