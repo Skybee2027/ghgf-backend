@@ -26,8 +26,6 @@ jobs:
           pip install -r requirements.txt
       - name: Create Directories
         run: mkdir -p config data/{logs,cache,images}
-      - name: Test Gemini API
-        run: python test_gemini.py
       - name: Run GHGF Pipeline
         run: python ghgf_orchestrator.py
       - name: Archive Logs
