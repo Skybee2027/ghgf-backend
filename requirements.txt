@@ -26,7 +26,7 @@ pyyaml>=6.0.1            # YAML config loading
 python-dotenv>=1.0.0     # .env file loading
 
 # WordPress
-python-wordpress-xmlrpc>=2.3.1  # WordPress XML-RPC API
+python-wordpress-xmlrpc>=2.3  # WordPress XML-RPC API
 wordpress-api>=0.5.2     # WordPress REST API
 
 # Data & Logging
