@@ -499,30 +499,59 @@ class AIProviderManager:
         OpenAI DALL-E 3 - MOST EXPENSIVE, ABSOLUTE LAST RESORT
         $0.08 per 1024x1024 image (vs $0.015 for Stability)
         Only use this when ALL other providers failed
+
+        NOTE: Your OpenAI account must have DALL-E access enabled.
+        If you get "model does not exist" error, your account doesn't have DALL-E access.
         """
         try:
-            logger.critical("⚠️⚠️⚠️  WARNING: USING OPENAI DALL-E (MOST EXPENSIVE) ⚠️⚠️⚠️")
+            # Check if user explicitly disabled DALL-E
+            if os.getenv("DISABLE_DALLE") == "true":
+                logger.warning("DALLE is disabled (DISABLE_DALLE=true)")
+                return {"success": False}
+
+            logger.critical("WARNING: USING OPENAI DALL-E (MOST EXPENSIVE)")
 
             # Use new OpenAI client syntax (v1.0+) - same pattern as text generation
-            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-            response = client.images.generate(
-                prompt=prompt,
-                n=1,
-                size=size,
-                model="dall-e-2"
-            )
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                logger.error("OPENAI_API_KEY not set - cannot use DALL-E")
+                return {"success": False}
 
-            logger.warning(f"⚠️ OpenAI DALL-E cost for this image: $0.08")
+            client = openai.OpenAI(api_key=api_key)
 
-            return {
-                "success": True,
-                "image_url": response.data[0].url,
-                "cost": 0.08,  # EXPENSIVE!
-                "provider": "openai_dalle",
-                "warning": "MOST EXPENSIVE PROVIDER USED"
-            }
+            # Try dall-e-3 first (if available), then fall back to dall-e-2
+            for model in ["dall-e-3", "dall-e-2"]:
+                try:
+                    logger.info(f"Attempting {model}...")
+                    response = client.images.generate(
+                        prompt=prompt,
+                        n=1,
+                        size=size,
+                        model=model
+                    )
+
+                    logger.warning(f"OpenAI {model} cost for this image: $0.08-0.20")
+
+                    return {
+                        "success": True,
+                        "image_url": response.data[0].url,
+                        "cost": 0.08,
+                        "provider": f"openai_{model}",
+                        "warning": "MOST EXPENSIVE PROVIDER USED"
+                    }
+                except Exception as model_error:
+                    logger.warning(f"  {model} not available: {str(model_error)[:100]}")
+                    continue
+
+            # If we get here, no DALL-E model is available
+            logger.error("No DALL-E models available on this OpenAI account")
+            logger.error("To fix: Ensure your OpenAI account has DALL-E access, or set DISABLE_DALLE=true")
+
         except Exception as e:
-            logger.error(f"OpenAI DALL-E error: {e}")
+            logger.error(f"OpenAI DALL-E error: {str(e)[:200]}")
+            if "does not exist" in str(e).lower():
+                logger.error("Your OpenAI account doesn't have DALL-E access. Set DISABLE_DALLE=true to skip.")
+
         return {"success": False}
 
     # ============================================================================
