@@ -24,7 +24,6 @@ openai==1.3.8
 wordpress-api==1.2.9
 
 # Database & Logging
-sqlite3  # Built-in
 
 # Optional: For extended features
 pillow==10.0.0  # Image processing
