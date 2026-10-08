@@ -503,7 +503,9 @@ class AIProviderManager:
         try:
             logger.critical("⚠️⚠️⚠️  WARNING: USING OPENAI DALL-E (MOST EXPENSIVE) ⚠️⚠️⚠️")
 
-            response = openai.Image.create(
+            # Use new OpenAI client syntax (v1.0+) - same pattern as text generation
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            response = client.images.generate(
                 prompt=prompt,
                 n=1,
                 size=size,
@@ -514,7 +516,7 @@ class AIProviderManager:
 
             return {
                 "success": True,
-                "image_url": response["data"][0]["url"],
+                "image_url": response.data[0].url,
                 "cost": 0.08,  # EXPENSIVE!
                 "provider": "openai_dalle",
                 "warning": "MOST EXPENSIVE PROVIDER USED"
