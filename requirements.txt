@@ -1,30 +1,53 @@
-# GHGF Autonomous Blog System Requirements
-# Production-ready with pinned versions
+# GHGF Automation System - Python Dependencies
 
-# Async & HTTP
-aiohttp==3.9.1
-httpx==0.25.2
-requests==2.31.0
-asyncio-contextmanager==1.0.1
+# AI Provider APIs
+anthropic>=0.28.0          # Claude API
+openai>=1.14.0             # OpenAI GPT & DALL-E
+google-generativeai>=0.5   # Google Gemini
+cohere>=5.0.0              # Cohere API
+replicate>=0.25.1          # Replicate API
+together>=1.2.2            # Together AI
 
-# Configuration
-pyyaml==6.0.1
-python-dotenv==1.0.0
+# Image Generation
+Pillow>=10.1.0            # Image processing
+stability-sdk>=0.7.1      # Stability AI images
 
-# AI Providers - FREE TIER PRIMARY
-groq==0.4.2
-huggingface-hub==0.19.4
-google-generativeai==0.3.0
+# Web & Async
+aiohttp>=3.9.1            # Async HTTP client
+asyncio-contextmanager>=1.0.0  # Async utilities
+requests>=2.31.0          # HTTP library
 
-# AI Providers - PAID BACKUP
-anthropic==0.25.0
-openai==1.3.8
+# Browser Automation (for free AI account access)
+selenium>=4.15.0          # Selenium WebDriver
+playwright>=1.40.0        # Playwright browser automation
 
-# WordPress Publishing
-wordpress-api==1.2.9
+# Configuration & Storage
+pyyaml>=6.0.1            # YAML config loading
+python-dotenv>=1.0.0     # .env file loading
 
-# Database & Logging
+# WordPress
+python-wordpress-xmlrpc>=2.3.1  # WordPress XML-RPC API
+wordpress-api>=0.5.2     # WordPress REST API
 
-# Optional: For extended features
-pillow==10.0.0  # Image processing
-beautifulsoup4==4.12.2  # HTML parsing
+# Data & Logging
+sqlalchemy>=2.0.0        # Database ORM
+pydantic>=2.5.0          # Data validation
+
+# Monitoring & Alerts
+discord.py>=2.3.0        # Discord notifications
+sendgrid>=6.10.0         # Email via SendGrid
+
+# Utilities
+python-dateutil>=2.8.2   # Date/time utilities
+pytz>=2023.3.post1       # Timezone support
+tenacity>=8.2.3          # Retry logic
+loguru>=0.7.2            # Advanced logging
+
+# Development (optional)
+pytest>=7.4.0            # Testing
+pytest-asyncio>=0.21.0   # Async test support
+black>=23.12.0           # Code formatting
+flake8>=6.1.0            # Linting
+
+# Optional: Local AI
+llama-cpp-python>=0.2.11 # Local LLM support (Ollama)
