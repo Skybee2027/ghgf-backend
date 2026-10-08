@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, List
 from ai_provider_manager import AIProviderManager
 from robo_3_5_images import ImageGeneratorRobot
+from ghgf_agents_6_9 import GHGF_7_Publisher
 
 # Configure logging
 logging.basicConfig(
@@ -365,18 +366,32 @@ class GHGFOrchestrator:
         logger.info(f"Publishing {len(posts)} posts to WordPress...")
 
         published = []
+        publisher = GHGF_7_Publisher()
+
         for post in posts:
             if post.get("approved"):
-                logger.info(f"Publishing: {post.get('title')}")
-                # Would connect to WordPress API here
-                published.append({
-                    "title": post.get("title"),
-                    "status": "published",
-                    "url": f"https://greathealthgreatfitness.com/{post.get('title').lower().replace(' ', '-')}",
-                    "timestamp": datetime.now().isoformat()
-                })
+                title = post.get("title", "Untitled")
+                content = post.get("content", "")
+                tags = post.get("tags", [])
 
-        logger.info(f"✓ Published {len(published)} posts")
+                logger.info(f"Publishing: {title}")
+
+                # Call the actual WordPress publisher
+                result = await publisher.execute(title, content, tags)
+
+                if result.get("status") == "success":
+                    published.append({
+                        "title": title,
+                        "status": "published",
+                        "post_id": result.get("data", {}).get("post_id"),
+                        "url": result.get("data", {}).get("url"),
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    logger.info(f"✓ Published: {title}")
+                else:
+                    logger.error(f"✗ Failed to publish: {title} - {result.get('error', 'Unknown error')}")
+
+        logger.info(f"✓ Published {len(published)}/{len([p for p in posts if p.get('approved')])} approved posts")
         return published
 
     async def _robo_8_monitor(self, published: List[Dict]) -> Dict:
