@@ -35,8 +35,7 @@ class AIProviderManager:
         self.openai_available = os.getenv("OPENAI_API_KEY") is not None
 
         # Initialize clients
-        if self.openai_available:
-            openai.api_key = os.getenv("OPENAI_API_KEY")
+        # OpenAI: API key will be passed directly to client (no global config needed)
 
         if os.getenv("GOOGLE_API_KEY"):
             genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -243,7 +242,8 @@ class AIProviderManager:
     async def _gemini_free_text(self, prompt: str) -> Dict[str, Any]:
         """Google Gemini free tier - FREE (10k requests/day)"""
         try:
-            model = genai.GenerativeModel("gemini-pro")
+            # Use current Gemini model (gemini-pro is deprecated)
+            model = genai.GenerativeModel("gemini-2.0-flash")
             response = model.generate_content(prompt)
 
             return {
@@ -285,15 +285,16 @@ class AIProviderManager:
         return {"success": False}
 
     async def _cohere_text(self, prompt: str) -> Dict[str, Any]:
-        """Cohere - Free tier available"""
+        """Cohere - Free tier available (using Chat API - Generate API is deprecated)"""
         try:
             import cohere
             co = cohere.Client(os.getenv("COHERE_API_KEY"))
-            response = co.generate(prompt=prompt, max_tokens=500)
+            # Use Chat API instead of deprecated Generate API
+            response = co.chat(message=prompt, max_tokens=500)
 
             return {
                 "success": True,
-                "text": response.generations[0].text,
+                "text": response.text,
                 "tokens": 500,
                 "cost": 0,  # Free tier
                 "provider": "cohere"
@@ -331,24 +332,26 @@ class AIProviderManager:
         try:
             logger.critical("⚠️⚠️⚠️  WARNING: USING OPENAI (EXPENSIVE) ⚠️⚠️⚠️")
 
-            response = openai.ChatCompletion.create(
-                model="gpt-4o",
+            # Use new OpenAI client syntax (v1.0+)
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",  # Use cheaper mini model instead of full GPT-4
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=1024
             )
 
-            usage = response.get("usage", {})
-            input_tokens = usage.get("prompt_tokens", 0)
-            output_tokens = usage.get("completion_tokens", 0)
+            usage = response.usage
+            input_tokens = usage.prompt_tokens
+            output_tokens = usage.completion_tokens
 
-            # OpenAI GPT-4 pricing (expensive!)
-            cost = (input_tokens * 0.03 + output_tokens * 0.06) / 1000
+            # OpenAI GPT-4 mini pricing (cheaper than full GPT-4)
+            cost = (input_tokens * 0.00015 + output_tokens * 0.0006) / 1  # Divided by 1 since already per 1k tokens
 
             logger.warning(f"⚠️ OpenAI cost for this request: ${cost:.4f}")
 
             return {
                 "success": True,
-                "text": response["choices"][0]["message"]["content"],
+                "text": response.choices[0].message.content,
                 "tokens": output_tokens,
                 "cost": cost,
                 "provider": "openai",
