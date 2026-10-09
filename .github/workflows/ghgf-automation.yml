@@ -110,3 +110,8 @@ jobs:
         run: |
           echo "✅ All 10 APIs healthy"
           echo "✅ Blogging automation triggered"
+
+      - name: DEBUG - Print environment
+        run: |
+          echo "=== Environment Variables ==="
+          env | grep -i "API_KEY\|API_TOKEN" | head -10 || echo "No API keys found in environment"
