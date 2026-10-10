@@ -41,29 +41,65 @@ class APIChecker:
         try:
             from groq import Groq
             client = Groq(api_key=api_key)
-            # Try multiple models - gpt-oss models from Groq console
-            models_to_try = ["gpt-oss-120b", "gpt-oss-20b", "qwen-3.8-27b"]
+
             response = None
             last_error = None
-            for model in models_to_try:
-                try:
-                    response = client.chat.completions.create(
-                        model=model,
-                        messages=[{"role": "user", "content": "OK"}],
-                        max_tokens=5,
-                        timeout=10
-                    )
-                    break
-                except Exception as model_error:
-                    last_error = str(model_error)[:80]
-                    continue
+
+            # Strategy 1: Try to dynamically get available models
+            try:
+                models = client.models.list()
+                if models and hasattr(models, 'data'):
+                    model_ids = [m.id for m in models.data if hasattr(m, 'id')]
+                    if model_ids:
+                        for model in model_ids[:3]:  # Try first 3 available
+                            try:
+                                response = client.chat.completions.create(
+                                    model=model,
+                                    messages=[{"role": "user", "content": "OK"}],
+                                    max_tokens=5,
+                                    timeout=15
+                                )
+                                break
+                            except Exception:
+                                continue
+            except:
+                pass  # If dynamic listing fails, fall back to hardcoded list
+
+            # Strategy 2: If dynamic discovery failed, try comprehensive hardcoded list
+            if not response:
+                models_to_try = [
+                    # Most likely to work
+                    "mixtral-8x7b-32768",
+                    "llama2-70b-4096",
+                    "llama-3.1-70b-versatile",
+                    "qwen-3.8-27b",
+                    "gpt-oss-120b",
+                    "gpt-oss-20b",
+                    # Fallback options
+                    "gemma2-9b-it",
+                    "gemma-7b-it"
+                ]
+
+                for model in models_to_try:
+                    try:
+                        response = client.chat.completions.create(
+                            model=model,
+                            messages=[{"role": "user", "content": "OK"}],
+                            max_tokens=5,
+                            timeout=15
+                        )
+                        last_error = f"(Worked with: {model})"
+                        break
+                    except Exception as model_error:
+                        last_error = f"{model}: {str(model_error)[:40]}"
+                        continue
 
             if response:
                 print(f"✅ Groq                      ✓          [TEXT] Connected")
                 self.results['groq'] = True
                 self.working += 1
             else:
-                error_msg = last_error if last_error else "No available models"
+                error_msg = last_error if last_error else "No available models found"
                 print(f"❌ Groq                      ✗          [TEXT] {error_msg}")
                 self.results['groq'] = False
         except Exception as e:
@@ -79,56 +115,117 @@ class APIChecker:
             self.total += 1
             return
 
+        response = None
+
+        # Try new google.genai library first
         try:
             import google.genai as genai
             client = genai.Client(api_key=api_key)
-            # Try multiple models - simplified list for better compatibility
-            models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
-            response = None
-            last_error = None
+
+            # Strategy 1: Dynamically get available models
+            try:
+                models = client.models.list()
+                if models:
+                    for model in models:
+                        if hasattr(model, 'name'):
+                            model_name = model.name
+                            try:
+                                response = client.models.generate_content(
+                                    model=model_name,
+                                    contents="Say OK"
+                                )
+                                if response:
+                                    print(f"✅ Google Gemini             ✓          [TEXT] Connected")
+                                    self.results['google'] = True
+                                    self.working += 1
+                                    self.total += 1
+                                    return
+                            except:
+                                continue
+            except:
+                pass  # If dynamic listing fails, try hardcoded models
+
+            # Strategy 2: Fallback to comprehensive hardcoded list for new library
+            models_to_try = [
+                'gemini-2.0-flash',
+                'gemini-1.5-flash',
+                'gemini-1.5-pro',
+                'gemini-2.0-flash-exp',
+                'gemini-1.5-pro-exp',
+                'gemini-exp-1114',
+                'gemini-pro'
+            ]
+
             for model_name in models_to_try:
                 try:
                     response = client.models.generate_content(
                         model=model_name,
                         contents="Say OK"
                     )
-                    break
-                except Exception as model_error:
-                    last_error = str(model_error)[:80]
+                    if response:
+                        print(f"✅ Google Gemini             ✓          [TEXT] Connected")
+                        self.results['google'] = True
+                        self.working += 1
+                        self.total += 1
+                        return
+                except:
                     continue
 
-            if response:
-                print(f"✅ Google Gemini             ✓          [TEXT] Connected")
-                self.results['google'] = True
-                self.working += 1
-            else:
-                error_msg = last_error if last_error else "No models available"
-                print(f"❌ Google Gemini             ✗          [TEXT] {error_msg}")
-                self.results['google'] = False
-        except Exception as e:
-            # Fallback to old library if new one fails
+        except ImportError:
+            pass  # Fall back to deprecated library
+
+        # Fallback to deprecated google.generativeai library
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+
+            # Strategy 1: Try to dynamically list models
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                models_to_try = ['gemini-pro', 'gemini-1.5-flash']
-                response = None
-                for model_name in models_to_try:
+                models = genai.list_models()
+                for model in models:
+                    model_name = model.name
                     try:
-                        model = genai.GenerativeModel(model_name)
-                        response = model.generate_content("Say OK")
-                        break
+                        model_obj = genai.GenerativeModel(model_name)
+                        response = model_obj.generate_content("Say OK", generation_config=genai.types.GenerationConfig(max_output_tokens=10))
+                        if response:
+                            print(f"✅ Google Gemini             ✓          [TEXT] Connected")
+                            self.results['google'] = True
+                            self.working += 1
+                            self.total += 1
+                            return
                     except:
                         continue
-                if response:
-                    print(f"✅ Google Gemini             ✓          [TEXT] Connected")
-                    self.results['google'] = True
-                    self.working += 1
-                else:
-                    print(f"❌ Google Gemini             ✗          [TEXT] {str(e)[:50]}")
-                    self.results['google'] = False
             except:
-                print(f"❌ Google Gemini             ✗          [TEXT] {str(e)[:50]}")
-                self.results['google'] = False
+                pass  # If dynamic listing fails, use hardcoded list
+
+            # Strategy 2: Fallback to comprehensive hardcoded list for deprecated library
+            models_to_try = [
+                'gemini-1.5-pro',
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-8b',
+                'gemini-pro',
+                'gemini-pro-vision'
+            ]
+
+            for model_name in models_to_try:
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    response = model.generate_content("Say OK", generation_config=genai.types.GenerationConfig(max_output_tokens=10))
+                    if response:
+                        print(f"✅ Google Gemini             ✓          [TEXT] Connected")
+                        self.results['google'] = True
+                        self.working += 1
+                        self.total += 1
+                        return
+                except:
+                    continue
+
+        except Exception as e:
+            pass
+
+        # If we get here, all strategies failed
+        print(f"❌ Google Gemini             ✗          [TEXT] No working models found")
+        self.results['google'] = False
         self.total += 1
 
     def check_openai(self):
