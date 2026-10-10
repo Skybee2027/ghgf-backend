@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-GHGF WordPress Blogging Robot - Fully Automatic
+GHGF WordPress Blogging Robot - Fully Automatic with Image Upload
 Generates and publishes blog posts using AI APIs
 - Content generation: Groq/Google/OpenAI/Cohere
-- Images: Unsplash/Pixabay
+- Images: Unsplash/Pixabay → WordPress media library
 - Affiliate links: CJ Affiliate
-- Publishing: WordPress REST API
+- Publishing: WordPress REST API with featured images
 """
 
 import os
@@ -75,7 +75,6 @@ class BloggingRobot:
             from groq import Groq
             client = Groq(api_key=self.groq_key)
 
-            # Try available models
             models_to_try = [
                 "mixtral-8x7b-32768",
                 "llama-3.1-70b-versatile",
@@ -185,7 +184,6 @@ class BloggingRobot:
             ("Cohere", self.generate_content_cohere),
         ]
 
-        # Shuffle to distribute load
         random.shuffle(generators)
 
         for name, generator in generators:
@@ -269,7 +267,6 @@ class BloggingRobot:
         if not self.cj_key or not content:
             return content
 
-        # Add generic affiliate link at end of content
         affiliate_section = f"""
         <hr>
         <p><strong>Recommended Products:</strong></p>
@@ -278,8 +275,46 @@ class BloggingRobot:
 
         return content + affiliate_section
 
+    def upload_image_to_wordpress(self, image_url):
+        """Download image and upload to WordPress media library"""
+        if not image_url or not self.site_url:
+            return None
+
+        try:
+            auth = (self.wp_username, self.wp_password)
+
+            # Download image
+            img_response = requests.get(image_url, timeout=15)
+            if img_response.status_code != 200:
+                return None
+
+            # Get filename from URL
+            filename = image_url.split('/')[-1].split('?')[0]
+            if not filename or '.' not in filename:
+                filename = "blog-image.jpg"
+
+            # Upload to WordPress
+            media_url = urljoin(self.site_url, '/wp-json/wp/v2/media')
+            files = {'file': (filename, img_response.content)}
+
+            response = requests.post(
+                media_url,
+                auth=auth,
+                files=files,
+                timeout=30
+            )
+
+            if response.status_code in [200, 201]:
+                media_id = response.json().get('id')
+                return media_id
+
+            return None
+        except Exception as e:
+            print(f"⚠️  Image upload failed: {str(e)[:60]}")
+            return None
+
     def create_wordpress_post(self, title, content, image_url, slug=None):
-        """Create and publish post to WordPress"""
+        """Create and publish post to WordPress with featured image"""
         if not self.site_url or not self.wp_username or not self.wp_password:
             print(f"{RED}❌ WordPress credentials missing{RESET}")
             return False
@@ -288,12 +323,16 @@ class BloggingRobot:
             wp_api = urljoin(self.site_url, '/wp-json/wp/v2/posts')
             auth = (self.wp_username, self.wp_password)
 
-            # Generate featured image ID by uploading or linking
+            # Upload image and get media ID
             featured_media = 0
             if image_url:
-                # Try to set featured image (simple approach - link directly)
-                # For full implementation, would need to upload to media library
-                pass
+                print(f"   📤 Uploading image to WordPress...", end=" ")
+                media_id = self.upload_image_to_wordpress(image_url)
+                if media_id:
+                    featured_media = media_id
+                    print(f"{GREEN}✅{RESET}")
+                else:
+                    print(f"{RED}✗{RESET}")
 
             post_data = {
                 "title": title,
@@ -302,6 +341,10 @@ class BloggingRobot:
                 "type": "post",
                 "categories": [1],  # Default category
             }
+
+            # Add featured image if available
+            if featured_media > 0:
+                post_data["featured_media"] = featured_media
 
             # Add slug if provided
             if slug:
@@ -370,7 +413,7 @@ class BloggingRobot:
 
     def run(self):
         """Run blogging robot"""
-        self.print_header("GHGF BLOGGING ROBOT - AUTOMATIC")
+        self.print_header("GHGF BLOGGING ROBOT - AUTOMATIC WITH IMAGES")
         print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
         # Validate WordPress
@@ -406,7 +449,7 @@ class BloggingRobot:
 
         # Generate multiple blog posts (default 3)
         posts_to_create = 3
-        print(f"🤖 Generating {posts_to_create} blog posts...\n")
+        print(f"🤖 Generating {posts_to_create} blog posts with featured images...\n")
 
         for i in range(posts_to_create):
             print(f"{YELLOW}Post {i+1}/{posts_to_create}{RESET}")
