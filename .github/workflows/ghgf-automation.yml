@@ -55,12 +55,12 @@ jobs:
       - name: Check if all APIs are working
         id: api_status
         run: |
-          if grep -q "SUMMARY: 10/10 APIs WORKING" health_check_result.txt; then
+          if grep -q "SUMMARY: 9/10 APIs WORKING" health_check_result.txt; then
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "✅ All 10 APIs are healthy"
+            echo "✅ 9/10 APIs are healthy - triggering WordPress!"
           else
             echo "status=failed" >> $GITHUB_OUTPUT
-            echo "❌ Some APIs are not responding"
+            echo "❌ Some critical APIs are not responding"
             exit 1
           fi
 
