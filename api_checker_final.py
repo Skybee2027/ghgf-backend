@@ -10,8 +10,8 @@ import time
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv('/root/ghgf-backend/.env')
+# Load environment variables from current directory (works in GitHub Actions and locally)
+load_dotenv('.env')
 
 BOLD = '\033[1m'
 RESET = '\033[0m'
@@ -41,14 +41,27 @@ class APIChecker:
         try:
             from groq import Groq
             client = Groq(api_key=api_key)
-            response = client.chat.completions.create(
-                model="mixtral-8x7b-32768",
-                messages=[{"role": "user", "content": "Say OK"}],
-                max_tokens=5
-            )
-            print(f"✅ Groq                      ✓          [TEXT] Connected")
-            self.results['groq'] = True
-            self.working += 1
+            # Try multiple models in case one isn't available
+            models_to_try = ["mixtral-8x7b-32768", "gemma-7b-it", "llama-3.1-70b-versatile", "llama2-70b-4096"]
+            response = None
+            for model in models_to_try:
+                try:
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[{"role": "user", "content": "OK"}],
+                        max_tokens=5
+                    )
+                    break
+                except:
+                    continue
+
+            if response:
+                print(f"✅ Groq                      ✓          [TEXT] Connected")
+                self.results['groq'] = True
+                self.working += 1
+            else:
+                print(f"❌ Groq                      ✗          [TEXT] No available models")
+                self.results['groq'] = False
         except Exception as e:
             print(f"❌ Groq                      ✗          [TEXT] {str(e)[:50]}")
             self.results['groq'] = False
@@ -65,11 +78,24 @@ class APIChecker:
         try:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content("Say OK")
-            print(f"✅ Google Gemini             ✓          [TEXT] Connected")
-            self.results['google'] = True
-            self.working += 1
+            # Try multiple models in case one is not available
+            models_to_try = ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro']
+            response = None
+            for model_name in models_to_try:
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    response = model.generate_content("Say OK")
+                    break
+                except:
+                    continue
+
+            if response:
+                print(f"✅ Google Gemini             ✓          [TEXT] Connected")
+                self.results['google'] = True
+                self.working += 1
+            else:
+                print(f"❌ Google Gemini             ✗          [TEXT] No models available")
+                self.results['google'] = False
         except Exception as e:
             print(f"❌ Google Gemini             ✗          [TEXT] {str(e)[:50]}")
             self.results['google'] = False
@@ -212,7 +238,7 @@ class APIChecker:
         self.total += 1
 
     def check_cj_affiliate(self):
-        api_key = os.getenv("CJ_AFFILIATE_API_KEY")
+        api_key = os.getenv("CJ_API_KEY") or os.getenv("CJ_AFFILIATE_API_KEY")
         if not api_key:
             print("❌ CJ Affiliate              ✗          [AFFILIATE] No API key")
             self.results['cj'] = False
@@ -240,7 +266,7 @@ class APIChecker:
         self.total += 1
 
     def check_shareasale(self):
-        token = os.getenv("SHAREASALE_TOKEN")
+        token = os.getenv("SHAREASALE_API_TOKEN") or os.getenv("SHAREASALE_TOKEN")
         user_id = os.getenv("SHAREASALE_USER_ID")
         if not token or not user_id:
             print("❌ ShareASale                ✗          [AFFILIATE] Missing credentials")
