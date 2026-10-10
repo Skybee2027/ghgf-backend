@@ -2,8 +2,11 @@ name: GHGF API Health Check & Blogging Automation
 
 on:
   schedule:
+    # Run every 6 hours
     - cron: '0 */6 * * *'
+  # Allow manual trigger
   workflow_dispatch:
+  # Run on push to main
   push:
     branches:
       - main
@@ -12,6 +15,7 @@ on:
 jobs:
   api-health-check:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -36,12 +40,15 @@ jobs:
           HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
           UNSPLASH_API_KEY: ${{ secrets.UNSPLASH_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-          CJ_AFFILIATE_API_KEY: ${{ secrets.CJ_AFFILIATE_API_KEY }}
+          CJ_API_KEY: ${{ secrets.CJ_API_KEY }}
+          CJ_PUBLISHER_ID: ${{ secrets.CJ_PUBLISHER_ID }}
           SHAREASALE_API_TOKEN: ${{ secrets.SHAREASALE_API_TOKEN }}
           SHAREASALE_USER_ID: ${{ secrets.SHAREASALE_USER_ID }}
         run: |
           python3 api_checker_final.py > health_check_result.txt 2>&1
           cat health_check_result.txt
+
+          # Extract summary line
           SUMMARY=$(grep "SUMMARY:" health_check_result.txt)
           echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
 
@@ -56,6 +63,16 @@ jobs:
             echo "❌ Some APIs are not responding"
             exit 1
           fi
+
+      - name: Trigger blogging automation (if APIs healthy)
+        if: steps.api_status.outputs.status == 'success'
+        env:
+          WORDPRESS_SITE_URL: ${{ secrets.WORDPRESS_SITE_URL }}
+          WORDPRESS_USERNAME: ${{ secrets.WORDPRESS_USERNAME }}
+          WORDPRESS_PASSWORD: ${{ secrets.WORDPRESS_PASSWORD }}
+        run: |
+          echo "🤖 All APIs healthy - triggering GHGF blogging robots..."
+          python3 scripts/trigger_blogging_robots.py
 
       - name: Upload health check results
         if: always()
