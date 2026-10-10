@@ -42,7 +42,7 @@ class APIChecker:
             from groq import Groq
             client = Groq(api_key=api_key)
             # Try multiple models in case one isn't available
-            models_to_try = ["llama-3.1-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it", "llama2-70b-4096"]
+            models_to_try = ["gpt-oss-120b", "gpt-oss-20b", "qwen-3.8-27b"]
             response = None
             for model in models_to_try:
                 try:
