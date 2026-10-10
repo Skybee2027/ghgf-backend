@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install python-dotenv groq openai cohere google-generativeai huggingface-hub replicate requests
+          pip install python-dotenv groq openai cohere google-genai google-generativeai huggingface-hub replicate requests
 
       - name: Run API Health Check
         id: health_check
