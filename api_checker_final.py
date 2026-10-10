@@ -41,18 +41,21 @@ class APIChecker:
         try:
             from groq import Groq
             client = Groq(api_key=api_key)
-            # Try multiple models in case one isn't available
+            # Try multiple models - gpt-oss models from Groq console
             models_to_try = ["gpt-oss-120b", "gpt-oss-20b", "qwen-3.8-27b"]
             response = None
+            last_error = None
             for model in models_to_try:
                 try:
                     response = client.chat.completions.create(
                         model=model,
                         messages=[{"role": "user", "content": "OK"}],
-                        max_tokens=5
+                        max_tokens=5,
+                        timeout=10
                     )
                     break
-                except:
+                except Exception as model_error:
+                    last_error = str(model_error)[:80]
                     continue
 
             if response:
@@ -60,7 +63,8 @@ class APIChecker:
                 self.results['groq'] = True
                 self.working += 1
             else:
-                print(f"❌ Groq                      ✗          [TEXT] No available models")
+                error_msg = last_error if last_error else "No available models"
+                print(f"❌ Groq                      ✗          [TEXT] {error_msg}")
                 self.results['groq'] = False
         except Exception as e:
             print(f"❌ Groq                      ✗          [TEXT] {str(e)[:50]}")
@@ -76,17 +80,21 @@ class APIChecker:
             return
 
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=api_key)
-            # Try multiple models in case one is not available
-            models_to_try = ['gemini-pro', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-exp-1114']
+            import google.genai as genai
+            client = genai.Client(api_key=api_key)
+            # Try multiple models - simplified list for better compatibility
+            models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
             response = None
+            last_error = None
             for model_name in models_to_try:
                 try:
-                    model = genai.GenerativeModel(model_name)
-                    response = model.generate_content("Say OK")
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents="Say OK"
+                    )
                     break
-                except:
+                except Exception as model_error:
+                    last_error = str(model_error)[:80]
                     continue
 
             if response:
@@ -94,11 +102,33 @@ class APIChecker:
                 self.results['google'] = True
                 self.working += 1
             else:
-                print(f"❌ Google Gemini             ✗          [TEXT] No models available")
+                error_msg = last_error if last_error else "No models available"
+                print(f"❌ Google Gemini             ✗          [TEXT] {error_msg}")
                 self.results['google'] = False
         except Exception as e:
-            print(f"❌ Google Gemini             ✗          [TEXT] {str(e)[:50]}")
-            self.results['google'] = False
+            # Fallback to old library if new one fails
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                models_to_try = ['gemini-pro', 'gemini-1.5-flash']
+                response = None
+                for model_name in models_to_try:
+                    try:
+                        model = genai.GenerativeModel(model_name)
+                        response = model.generate_content("Say OK")
+                        break
+                    except:
+                        continue
+                if response:
+                    print(f"✅ Google Gemini             ✓          [TEXT] Connected")
+                    self.results['google'] = True
+                    self.working += 1
+                else:
+                    print(f"❌ Google Gemini             ✗          [TEXT] {str(e)[:50]}")
+                    self.results['google'] = False
+            except:
+                print(f"❌ Google Gemini             ✗          [TEXT] {str(e)[:50]}")
+                self.results['google'] = False
         self.total += 1
 
     def check_openai(self):
