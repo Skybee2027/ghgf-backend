@@ -42,7 +42,7 @@ class APIChecker:
             from groq import Groq
             client = Groq(api_key=api_key)
             # Try multiple models in case one isn't available
-            models_to_try = ["mixtral-8x7b-32768", "gemma-7b-it", "llama-3.1-70b-versatile", "llama2-70b-4096"]
+            models_to_try = ["llama-3.1-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it", "llama2-70b-4096"]
             response = None
             for model in models_to_try:
                 try:
@@ -79,7 +79,7 @@ class APIChecker:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             # Try multiple models in case one is not available
-            models_to_try = ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro']
+            models_to_try = ['gemini-pro', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-exp-1114']
             response = None
             for model_name in models_to_try:
                 try:
