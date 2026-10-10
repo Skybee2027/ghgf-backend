@@ -27,23 +27,26 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install python-dotenv groq openai cohere google-genai google-generativeai huggingface-hub replicate requests
+          pip install python-dotenv groq openai cohere google-generativeai huggingface-hub replicate requests
+
+      - name: Create .env file with secrets
+        run: |
+          cat > .env << EOF
+          GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          COHERE_API_KEY=${{ secrets.COHERE_API_KEY }}
+          REPLICATE_API_KEY=${{ secrets.REPLICATE_API_KEY }}
+          HUGGINGFACE_API_KEY=${{ secrets.HUGGINGFACE_API_KEY }}
+          UNSPLASH_API_KEY=${{ secrets.UNSPLASH_API_KEY }}
+          PIXABAY_API_KEY=${{ secrets.PIXABAY_API_KEY }}
+          CJ_AFFILIATE_API_KEY=${{ secrets.CJ_AFFILIATE_API_KEY }}
+          SHAREASALE_API_TOKEN=${{ secrets.SHAREASALE_API_TOKEN }}
+          SHAREASALE_USER_ID=${{ secrets.SHAREASALE_USER_ID }}
+          EOF
 
       - name: Run API Health Check
         id: health_check
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
-          REPLICATE_API_KEY: ${{ secrets.REPLICATE_API_KEY }}
-          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
-          UNSPLASH_API_KEY: ${{ secrets.UNSPLASH_API_KEY }}
-          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-          CJ_API_KEY: ${{ secrets.CJ_API_KEY }}
-          CJ_PUBLISHER_ID: ${{ secrets.CJ_PUBLISHER_ID }}
-          SHAREASALE_API_TOKEN: ${{ secrets.SHAREASALE_API_TOKEN }}
-          SHAREASALE_USER_ID: ${{ secrets.SHAREASALE_USER_ID }}
         run: |
           python3 api_checker_final.py > health_check_result.txt 2>&1
           cat health_check_result.txt
@@ -55,41 +58,48 @@ jobs:
       - name: Check if all APIs are working
         id: api_status
         run: |
-          if grep -q "SUMMARY: 9/10 APIs WORKING" health_check_result.txt; then
+          if grep -q "SUMMARY: 10/10 APIs WORKING" health_check_result.txt; then
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "✅ 9/10 APIs are healthy - triggering WordPress!"
+            echo "✅ All 10 APIs are healthy"
           else
             echo "status=failed" >> $GITHUB_OUTPUT
-            echo "❌ Some critical APIs are not responding"
+            echo "❌ Some APIs are not responding"
             exit 1
           fi
 
-- name: Trigger blogging automation (if APIs healthy)
-  if: steps.api_status.outputs.status == 'success'
-  env:
-    GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-    GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-    COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
-    REPLICATE_API_KEY: ${{ secrets.REPLICATE_API_KEY }}
-    HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
-    UNSPLASH_API_KEY: ${{ secrets.UNSPLASH_API_KEY }}
-    PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-    CJ_API_KEY: ${{ secrets.CJ_API_KEY }}
-    WORDPRESS_SITE_URL: ${{ secrets.WORDPRESS_SITE_URL }}
-    WORDPRESS_USERNAME: ${{ secrets.WORDPRESS_USERNAME }}
-    WORDPRESS_PASSWORD: ${{ secrets.WORDPRESS_PASSWORD }}
-  run: |
-    echo "🤖 All APIs healthy - triggering GHGF blogging robots..."
-    python3 scripts/trigger_blogging_robots.py
+      - name: Trigger blogging automation (if APIs healthy)
+        if: steps.api_status.outputs.status == 'success'
+        run: |
+          echo "🤖 All APIs healthy - triggering GHGF blogging robots..."
+          # TODO: Add your blogging robot trigger script here
+          # Example: python3 scripts/trigger_blogging_robots.py
 
       - name: Upload health check results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: api-health-check-results
           path: health_check_result.txt
           retention-days: 30
+
+      - name: Send Slack notification (optional)
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "❌ GHGF API Health Check Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "⚠️ GHGF API Health Check Failed\n\n${{ steps.health_check.outputs.summary }}"
+                  }
+                }
+              ]
+            }
 
   notify-success:
     needs: api-health-check
